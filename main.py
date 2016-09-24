@@ -3,8 +3,16 @@ from time import strptime, mktime
 
 format = "%Y-%m-%d %H:%M:%S %z"
 cursor = 0
-infile = open(sys.argv[1], "r")
-outfile = open(sys.argv[2], "w")
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "ho:s:e:", ["output=", "start=", "end="])
+except getopt.GetoptError as err:
+    print (err)
+    sys.exit(2)
+for o, a in opts:
+    if o == 'h':
+        print ("logreader.py: -o <outputfile> -s <starttimestamp> -e <endtimestamp>")
+# infile = open(sys.argv[1], "r")
+# outfile = open(sys.argv[2], "w")
 
 
 def gettime(date):
