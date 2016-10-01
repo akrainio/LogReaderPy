@@ -75,12 +75,12 @@ def main(params):
         else:
             return thislineloc(mid)
 
+    print(params)
     outfile = sys.__stdout__
     startstamp = None
     endstamp = None
     infile = None
     format = "%Y-%m-%d %H:%M:%S %z"
-    cursor = 0
 
     try:
         opts, args = getopt.getopt(params, "ho:s:e:", ["help", "output=", "start=", "end="])
@@ -91,7 +91,7 @@ def main(params):
     try:
         infile = open(infilename, "r")
     except IOError as err:
-        print("logreader: I/O error({0}): {1}: {2}".format(err.errno, err.strerror))
+        print(err)
         sys.exit(2)
     for o, a in opts:
         if o in ('-h', '--help'):
@@ -134,4 +134,5 @@ def main(params):
     infile.close()
     outfile.close()
 
-main(sys.argv[1:])
+if __name__ == '__main__':
+    main(sys.argv[1:])

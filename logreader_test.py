@@ -1,4 +1,7 @@
 import unittest
+from logreader import main
+
+
 # things to test:
 # start stamp same as the earliest stamp in file
 # start stamp before the earliest stamp in file
@@ -14,5 +17,8 @@ import unittest
 # file is empty
 # line doesn't start with a valid pattern
 
-class test_empty(unittest.TestCase):
+class TestStringMethods(unittest.TestCase):
     def test_empty(self):
+        params = ["-s", "0000-00-00 00:00:00.000 -0000", "-e", "0000-00-00 00:00:00.040 -0000", "SimpleLog"]
+        print(params)
+        main(params)
