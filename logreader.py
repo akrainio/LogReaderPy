@@ -8,74 +8,53 @@ def main(params):
         time = mktime(strptime(formatted, format)) + millisec
         return time
 
-
-    def nexttime(offset):
-        # if offset == 0:
-        #     return gettime(infile.read(29))
-        while True:
-            offset = nextlineloc(offset)
-            infile.seek(offset)
-            date = infile.read(29)
-            if re.match("^(19|20)\d\d-\d\d-\d\d \d\d:\d\d:\d\d.\d\d\d (-|\+)\d{4}", date) is not None:
-                return gettime(date)
-
-
-    def nextlineloc(offset):
-        while True:
-            if offset == insize: return insize
-            if offset >= insize or offset < 0:
-                print("LogReader: nextlineloc: Location " + offset.__str__() + " is outside of file, largest "
-                                                                               "possible location is " + insize.__str__())
-                exit(2)
-            infile.seek(offset)
-            got = infile.read(1)
-            offset += 1
-            if got == "\n":
-                infile.seek(offset)
-                if (infile.read(1)) == "\n":
-                    offset += 1
-                return offset
-
-
-    def thislineloc(offset):
-        while True:
-            if offset == 0: return offset
-            if offset >= insize or offset < 0:
-                print("LogReader: thislineloc: Location " + offset.__str__() + " is outside of file, largest "
-                                                                               "possible location is " + insize.__str__())
-                exit(2)
+    def get_line_info(where):
+        offset = where
+        while offset != 0:
+            infile.seek(offset - 1)
+            if infile.read(1) == '\n':
+                break
             offset -= 1
-            infile.seek(offset)
-            got = infile.read(1)
-            if got == "\n":
-                date = infile.read(29)
-                if re.match("^(19|20)\d\d-\d\d-\d\d \d\d:\d\d:\d\d.\d\d\d (-|\+)\d{4}", date) is not None:
-                    return offset + 1
+        infile.seek(offset)
+        date = infile.read(29)
+        if re.match("^(19|20)\d\d-\d\d-\d\d \d\d:\d\d:\d\d.\d\d\d (-|\+)\d{4}", date) is not None:
+            time = gettime(date)
+        else:
+            print("logreader: getline: '" + date + "' does not match date pattern")
+            sys.exit(2)
+        end_offset = where
+        while end_offset < insize:
+            infile.seek(end_offset)
+            if infile.read(1) == '\n':
+                break
+            end_offset += 1
+        return offset, end_offset + 1, time
 
 
-    def find(time, isstart):
-        prevtime = -1
-        currtime = 0
+    def find(time, is_start):
         min = 0
         max = insize
         mid = int((min + max) / 2)
-        while prevtime != currtime:
-            prevtime = currtime
-            currtime = nexttime(mid)
-            if currtime > time:
-                max = mid
-                mid = int((min + max) / 2)
-            elif currtime < time:
-                min = mid
-                mid = int((min + max) / 2)
-            elif currtime == time:
-                return nextlineloc(mid)
-        if isstart:
-            return nextlineloc(mid)
+        p_mid = None
+        c_start, c_end, c_time = get_line_info(mid)
+        while p_mid != mid:
+            p_mid = mid
+            if c_time > time:
+                max = c_start
+            elif c_time < time:
+                min = c_end
+            elif c_time == time:
+                return c_start
+            mid = int((min + max) / 2)
+            c_start, c_end, c_time = get_line_info(mid)
+        if is_start:
+            return c_start
         else:
-            return thislineloc(mid)
+            if c_time < time:
+                return c_end
+            else:
+                return c_start
 
-    print(params)
     outfile = sys.__stdout__
     startstamp = None
     endstamp = None
@@ -112,25 +91,25 @@ def main(params):
     infile.seek(0, 2)
     insize = infile.tell()
     if startstamp is None:
-        startstamp = nexttime(0)
-    if endstamp is None:
-        endstamp = thislineloc(insize)
-    if startstamp > endstamp:
-        tempStamp = endstamp
-        endstamp = startstamp
-        startstamp = tempStamp
+        startstamp = get_line_info(0)[2]
+    if endstamp is not None:
+        if startstamp > endstamp:
+            tempStamp = endstamp
+            endstamp = startstamp
+            startstamp = tempStamp
+        endLoc = find(endstamp, False)
+    else:
+        endLoc = insize
     startLoc = find(startstamp, True)
-    endLoc = nextlineloc(find(endstamp, False))
-    print(startLoc)
-    print(endLoc)
     infile.seek(startLoc)
     x = 0
     while x < endLoc - startLoc:
         x += 1
         got = infile.read(1)
-        if got == '\n':
-            x += 1
         outfile.write(got)
+    infile.seek(insize - 1)
+    if infile.read(1) is not "\n":
+        outfile.write("\n")
     infile.close()
     outfile.close()
 
